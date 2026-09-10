@@ -1,3 +1,4 @@
+import 'package:app_shopeefood/data/shopee_food_data.dart';
 import 'package:app_shopeefood/screens/account_screen.dart';
 import 'package:app_shopeefood/screens/order_tracking_screen.dart';
 import 'package:app_shopeefood/screens/restaurant_detail_screen.dart';
@@ -13,10 +14,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? _selectedCategory;
+  RestaurantFilter _selectedFilter = RestaurantFilter.nearby;
 
   void _selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
+      _selectedFilter = RestaurantFilter.nearby;
     });
     _showHomeAction(context, 'Đang xem danh mục $category');
   }
@@ -24,8 +27,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showAllRestaurants() {
     setState(() {
       _selectedCategory = null;
+      _selectedFilter = RestaurantFilter.nearby;
     });
     _showHomeAction(context, 'Đã hiển thị tất cả món ăn');
+  }
+
+  void _selectFilter(RestaurantFilter filter) {
+    setState(() {
+      _selectedFilter = filter;
+    });
+    _showHomeAction(context, 'Đang lọc theo ${filter.label}');
   }
 
   @override
@@ -56,7 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       onShowAll: _showAllRestaurants,
                     ),
                     const SizedBox(height: 22),
-                    _NearbySection(selectedCategory: _selectedCategory),
+                    _NearbySection(
+                      selectedCategory: _selectedCategory,
+                      selectedFilter: _selectedFilter,
+                      onFilterTap: _selectFilter,
+                    ),
                   ],
                 ),
               ),
@@ -110,69 +125,75 @@ class _AddressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = ShopeeFoodScope.of(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: const Color(0xffffdbce),
-              borderRadius: BorderRadius.circular(999),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.location_on_rounded,
-              color: AppColors.primary,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 6),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Giao đến',
-                      style: TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        height: 1.2,
-                      ),
-                    ),
-                    SizedBox(width: 2),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.muted,
-                      size: 14,
-                    ),
-                  ],
-                ),
-                Text(
-                  '123 Nguyễn Văn Cừ, P.4, Q.5',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.text,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    height: 1.38,
+      child: InkWell(
+        onTap: () => _showAddressPicker(context),
+        borderRadius: BorderRadius.circular(14),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xffffdbce),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
                   ),
-                ),
-              ],
+                ],
+              ),
+              child: const Icon(
+                Icons.location_on_rounded,
+                color: AppColors.primary,
+                size: 18,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Text(
+                        'Giao đến',
+                        style: TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          height: 1.2,
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.muted,
+                        size: 14,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    state.selectedAddress.address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      height: 1.38,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -476,18 +497,6 @@ class _PromoButton extends StatelessWidget {
   }
 }
 
-void _showHomeAction(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 1),
-      ),
-    );
-}
-
 class _CategorySection extends StatelessWidget {
   const _CategorySection({
     required this.selectedCategory,
@@ -580,15 +589,6 @@ class _CategorySection extends StatelessWidget {
                           border: active
                               ? Border.all(color: AppColors.primary, width: 1.5)
                               : null,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: active ? 0.1 : 0.05,
-                              ),
-                              blurRadius: active ? 7 : 2,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
                         ),
                         child: ClipOval(
                           child: AppAssetImage(
@@ -625,114 +625,26 @@ class _CategorySection extends StatelessWidget {
 }
 
 class _NearbySection extends StatelessWidget {
-  const _NearbySection({required this.selectedCategory});
+  const _NearbySection({
+    required this.selectedCategory,
+    required this.selectedFilter,
+    required this.onFilterTap,
+  });
 
   final String? selectedCategory;
-
-  static const restaurants = [
-    _Restaurant(
-      title: 'Cơm Tấm Phúc Lộc Thọ',
-      category: 'Cơm',
-      image: AppAssets.restaurantRice,
-      distance: '1.2 km',
-      time: '20-25 phút',
-      rating: '4.8',
-      selected: true,
-      tags: ['Freeship Xtra', 'Giảm 20k'],
-    ),
-    _Restaurant(
-      title: 'Trà Sữa Tocotoco - Nguyễn Trãi',
-      category: 'Trà sữa',
-      image: AppAssets.restaurantTea,
-      distance: '0.8 km',
-      time: '15-20 phút',
-      rating: '4.7',
-      tags: ['Freeship', 'Mua 1 tặng 1'],
-    ),
-    _Restaurant(
-      title: 'Bún Bò Huế An Nam',
-      category: 'Bún / Phở',
-      image: AppAssets.restaurantNoodles,
-      distance: '2.1 km',
-      time: '25-30 phút',
-      rating: '4.9',
-      tags: ['Giảm 30k đơn 100k', 'Chuẩn vị Huế'],
-    ),
-    _Restaurant(
-      title: 'Gà Rán Giòn Cay - Lê Hồng Phong',
-      category: 'Gà rán',
-      image: AppAssets.categoryChicken,
-      distance: '1.6 km',
-      time: '18-22 phút',
-      rating: '4.6',
-      tags: ['Combo tiết kiệm', 'Gà cay'],
-    ),
-    _Restaurant(
-      title: 'Nước Ép Cam Tươi 24H',
-      category: 'Đồ uống',
-      image: AppAssets.categoryDrink,
-      distance: '0.5 km',
-      time: '10-15 phút',
-      rating: '4.8',
-      tags: ['Mua 2 giảm 15%', 'Tươi mỗi ngày'],
-    ),
-    _Restaurant(
-      title: 'Cơm Gà Xối Mỡ Út Mập',
-      category: 'Cơm',
-      image: AppAssets.home12,
-      distance: '1.9 km',
-      time: '22-28 phút',
-      rating: '4.7',
-      tags: ['Cơm trưa', 'Giảm 15k'],
-    ),
-    _Restaurant(
-      title: 'Trà Sữa Nhà Làm - Matcha & Kem Cheese',
-      category: 'Trà sữa',
-      image: AppAssets.restaurantTea,
-      distance: '1.1 km',
-      time: '15-20 phút',
-      rating: '4.8',
-      tags: ['Best seller', 'Topping miễn phí'],
-    ),
-    _Restaurant(
-      title: 'Phở Bò Tái Nạm Gia Truyền',
-      category: 'Bún / Phở',
-      image: AppAssets.restaurantNoodles,
-      distance: '2.4 km',
-      time: '25-30 phút',
-      rating: '4.9',
-      tags: ['Nước dùng 12h', 'Freeship'],
-    ),
-    _Restaurant(
-      title: 'Gà Sốt Mắm Tỏi - Cơm Văn Phòng',
-      category: 'Gà rán',
-      image: AppAssets.home01,
-      distance: '1.4 km',
-      time: '18-24 phút',
-      rating: '4.7',
-      tags: ['Sốt mắm tỏi', 'Combo 2 người'],
-    ),
-    _Restaurant(
-      title: 'Sinh Tố Bơ Sầu Riêng Cô Ba',
-      category: 'Đồ uống',
-      image: AppAssets.home02,
-      distance: '0.9 km',
-      time: '12-18 phút',
-      rating: '4.6',
-      tags: ['Mát lạnh', 'Ít đường'],
-    ),
-  ];
+  final RestaurantFilter selectedFilter;
+  final ValueChanged<RestaurantFilter> onFilterTap;
 
   @override
   Widget build(BuildContext context) {
-    final visibleRestaurants = selectedCategory == null
-        ? restaurants
-        : restaurants
-              .where((restaurant) => restaurant.category == selectedCategory)
-              .toList();
-    final sectionTitle = selectedCategory == null
-        ? 'Quán gần bạn'
-        : 'Món $selectedCategory gần bạn';
+    final visibleRestaurants = _visibleRestaurants();
+    final sectionTitle = switch (selectedFilter) {
+      RestaurantFilter.topRated => 'Top đánh giá',
+      RestaurantFilter.promotion => 'Đang khuyến mãi',
+      RestaurantFilter.nearby => selectedCategory == null
+          ? 'Quán gần bạn'
+          : 'Món $selectedCategory gần bạn',
+    };
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -770,30 +682,26 @@ class _NearbySection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              _FilterChip(
-                label: 'Gần nhất',
-                active: true,
-                icon: Icons.directions_walk,
-                onTap: () =>
-                    _showHomeAction(context, 'Đã sắp xếp theo quán gần nhất'),
-              ),
-              const SizedBox(width: 8),
-              _FilterChip(
-                label: 'Đánh giá cao',
-                icon: Icons.star_rounded,
-                onTap: () =>
-                    _showHomeAction(context, 'Đã lọc các quán đánh giá cao'),
-              ),
-              const SizedBox(width: 8),
-              _FilterChip(
-                label: 'Khuyến mãi',
-                icon: Icons.local_offer_outlined,
-                onTap: () =>
-                    _showHomeAction(context, 'Đã lọc các quán có khuyến mãi'),
-              ),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final filter in RestaurantFilter.values) ...[
+                  _FilterChip(
+                    label: filter.label,
+                    active: selectedFilter == filter,
+                    icon: switch (filter) {
+                      RestaurantFilter.nearby => Icons.directions_walk,
+                      RestaurantFilter.topRated => Icons.star_rounded,
+                      RestaurantFilter.promotion => Icons.local_offer_outlined,
+                    },
+                    onTap: () => onFilterTap(filter),
+                  ),
+                  if (filter != RestaurantFilter.values.last)
+                    const SizedBox(width: 8),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           ...visibleRestaurants.map(
@@ -805,6 +713,35 @@ class _NearbySection extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  List<Restaurant> _visibleRestaurants() {
+    final restaurants = selectedCategory == null
+        ? demoRestaurants
+        : demoRestaurants
+              .where((restaurant) => restaurant.category == selectedCategory)
+              .toList();
+    final filtered = switch (selectedFilter) {
+      RestaurantFilter.nearby => restaurants,
+      RestaurantFilter.topRated => restaurants
+          .where((restaurant) => restaurant.rating >= 4.8)
+          .toList(),
+      RestaurantFilter.promotion => restaurants
+          .where((restaurant) => restaurant.hasPromotion)
+          .toList(),
+    };
+
+    return List<Restaurant>.from(filtered)
+      ..sort((left, right) {
+        if (selectedFilter == RestaurantFilter.topRated) {
+          return right.rating.compareTo(left.rating);
+        }
+        if (selectedFilter == RestaurantFilter.nearby &&
+            left.selected != right.selected) {
+          return left.selected ? -1 : 1;
+        }
+        return left.distanceKm.compareTo(right.distanceKm);
+      });
   }
 }
 
@@ -866,7 +803,7 @@ class _FilterChip extends StatelessWidget {
 class _RestaurantCard extends StatelessWidget {
   const _RestaurantCard({required this.restaurant});
 
-  final _Restaurant restaurant;
+  final Restaurant restaurant;
 
   @override
   Widget build(BuildContext context) {
@@ -874,7 +811,7 @@ class _RestaurantCard extends StatelessWidget {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => const RestaurantDetailScreen(),
+            builder: (_) => RestaurantDetailScreen(restaurant: restaurant),
           ),
         );
       },
@@ -915,13 +852,13 @@ class _RestaurantCard extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                if (restaurant.selected) ...[
+                                if (restaurant.partner) ...[
                                   const _PartnerBadge(),
                                   const SizedBox(width: 6),
                                 ],
                                 Expanded(
                                   child: Text(
-                                    restaurant.title,
+                                    restaurant.name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -938,7 +875,7 @@ class _RestaurantCard extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  restaurant.distance,
+                                  restaurant.distanceLabel,
                                   style: const TextStyle(
                                     color: AppColors.muted,
                                     fontSize: 13,
@@ -960,7 +897,7 @@ class _RestaurantCard extends StatelessWidget {
                                 const SizedBox(width: 2),
                                 Flexible(
                                   child: Text(
-                                    restaurant.time,
+                                    restaurant.etaLabel,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: AppColors.success,
@@ -1025,7 +962,7 @@ class _RestaurantCard extends StatelessWidget {
 class _RestaurantImage extends StatelessWidget {
   const _RestaurantImage({required this.restaurant});
 
-  final _Restaurant restaurant;
+  final Restaurant restaurant;
 
   @override
   Widget build(BuildContext context) {
@@ -1043,7 +980,7 @@ class _RestaurantImage extends StatelessWidget {
           AppAssetImage(
             restaurant.image,
             fit: BoxFit.cover,
-            fallback: AppImageFallback(label: restaurant.rating),
+            fallback: AppImageFallback(label: restaurant.ratingLabel),
           ),
           Positioned(
             left: 4,
@@ -1063,7 +1000,7 @@ class _RestaurantImage extends StatelessWidget {
                   ),
                   const SizedBox(width: 2),
                   Text(
-                    restaurant.rating,
+                    restaurant.ratingLabel,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -1112,8 +1049,9 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isFreeShip = label.toLowerCase().contains('freeship');
-    final isDiscount = label.toLowerCase().contains('giảm');
+    final lower = label.toLowerCase();
+    final isFreeShip = lower.contains('freeship');
+    final isDiscount = lower.contains('giảm') || lower.contains('mua');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1151,24 +1089,68 @@ class _Category {
   final String image;
 }
 
-class _Restaurant {
-  const _Restaurant({
-    required this.title,
-    required this.category,
-    required this.image,
-    required this.distance,
-    required this.time,
-    required this.rating,
-    required this.tags,
-    this.selected = false,
-  });
+void _showAddressPicker(BuildContext context) {
+  final state = ShopeeFoodScope.of(context);
 
-  final String title;
-  final String category;
-  final String image;
-  final String distance;
-  final String time;
-  final String rating;
-  final List<String> tags;
-  final bool selected;
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Chọn địa chỉ giao hàng',
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (final address in demoAddresses)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    state.selectedAddress.id == address.id
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    address.label,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(address.address),
+                  onTap: () {
+                    state.selectAddress(address);
+                    Navigator.of(sheetContext).pop();
+                    _showHomeAction(context, 'Đã đổi địa chỉ giao hàng');
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+void _showHomeAction(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+      ),
+    );
 }

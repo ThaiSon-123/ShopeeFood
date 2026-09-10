@@ -1,16 +1,29 @@
 import 'dart:ui';
 
+import 'package:app_shopeefood/data/shopee_food_data.dart';
 import 'package:app_shopeefood/screens/account_screen.dart';
 import 'package:app_shopeefood/screens/home_screen.dart';
 import 'package:app_shopeefood/shared/shopee_food_widgets.dart';
 import 'package:flutter/material.dart';
 
-class OrderTrackingScreen extends StatelessWidget {
+class OrderTrackingScreen extends StatefulWidget {
   const OrderTrackingScreen({super.key});
+
+  @override
+  State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
+}
+
+class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
+  OrderStatus _selectedStatus = OrderStatus.delivering;
 
   @override
   Widget build(BuildContext context) {
     final topSafeArea = MediaQuery.paddingOf(context).top;
+    final state = ShopeeFoodScope.of(context);
+    final orders = state.orders
+        .where((order) => order.status == _selectedStatus)
+        .toList();
+    final selectedOrder = orders.isEmpty ? null : orders.first;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -21,20 +34,40 @@ class OrderTrackingScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _TrackingMap(),
-                    SizedBox(height: 12),
-                    _OrderCodeRow(),
-                    SizedBox(height: 12),
-                    _DeliveryStepperCard(),
-                    SizedBox(height: 12),
-                    _DriverCard(),
-                    SizedBox(height: 12),
-                    _CompactOrderSummary(),
-                    SizedBox(height: 20),
-                    _ReturnHomeButton(),
+                    _StatusTabs(
+                      selectedStatus: _selectedStatus,
+                      onTap: (status) => setState(() {
+                        _selectedStatus = status;
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    if (selectedOrder == null)
+                      _EmptyStatusCard(status: _selectedStatus)
+                    else ...[
+                      if (_selectedStatus == OrderStatus.delivering) ...[
+                        _TrackingMap(order: selectedOrder),
+                        const SizedBox(height: 12),
+                        _OrderCodeRow(order: selectedOrder),
+                        const SizedBox(height: 12),
+                        _DeliveryStepperCard(order: selectedOrder),
+                        const SizedBox(height: 12),
+                        const _DriverCard(),
+                        const SizedBox(height: 12),
+                      ] else ...[
+                        _OrderCodeRow(order: selectedOrder),
+                        const SizedBox(height: 12),
+                        _StatusSummaryCard(order: selectedOrder),
+                        const SizedBox(height: 12),
+                      ],
+                      _OrdersList(orders: orders.skip(1).toList()),
+                      const SizedBox(height: 12),
+                      _CompactOrderSummary(order: selectedOrder),
+                      const SizedBox(height: 20),
+                      const _ReturnHomeButton(),
+                    ],
                   ],
                 ),
               ),
@@ -195,8 +228,92 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
+class _StatusTabs extends StatelessWidget {
+  const _StatusTabs({required this.selectedStatus, required this.onTap});
+
+  final OrderStatus selectedStatus;
+  final ValueChanged<OrderStatus> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          for (final status in OrderStatus.values) ...[
+            Expanded(
+              child: _StatusChip(
+                status: status,
+                active: selectedStatus == status,
+                onTap: () => onTap(status),
+              ),
+            ),
+            if (status != OrderStatus.values.last) const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.status,
+    required this.active,
+    required this.onTap,
+  });
+
+  final OrderStatus status;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = switch (status) {
+      OrderStatus.delivering => Icons.delivery_dining_rounded,
+      OrderStatus.delivered => Icons.check_circle_outline_rounded,
+      OrderStatus.cancelled => Icons.cancel_outlined,
+    };
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        height: 36,
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active ? AppColors.primary : AppColors.divider,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: active ? Colors.white : AppColors.primary, size: 15),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                status.label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: active ? Colors.white : AppColors.text,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _TrackingMap extends StatelessWidget {
-  const _TrackingMap();
+  const _TrackingMap({required this.order});
+
+  final FoodOrder order;
 
   @override
   Widget build(BuildContext context) {
@@ -205,21 +322,21 @@ class _TrackingMap extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(child: CustomPaint(painter: _MapPainter())),
-          const Positioned(
+          Positioned(
             left: 40,
             top: 50,
             child: _MapMarker(
-              label: 'Phúc Lộc Thọ',
-              color: Color(0xffa73a00),
+              label: order.restaurant.name,
+              color: const Color(0xffa73a00),
               icon: Icons.storefront_rounded,
             ),
           ),
-          const Positioned(
+          Positioned(
             right: 36,
             top: 170,
             child: _MapMarker(
-              label: '123 Nguyễn Văn Cừ',
-              color: Color(0xff00873a),
+              label: order.address.address,
+              color: const Color(0xff00873a),
               icon: Icons.home_rounded,
             ),
           ),
@@ -234,16 +351,18 @@ class _TrackingMap extends StatelessWidget {
 class _MapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final background = Paint()..color = const Color(0xffe9e7ed);
-    canvas.drawRect(Offset.zero & size, background);
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xffe9e7ed));
 
-    final district = Paint()
-      ..color = const Color(0xffd7e8f7).withValues(alpha: 0.75);
-    canvas.drawCircle(Offset(size.width * 0.92, 20), 78, district);
-
-    final park = Paint()
-      ..color = const Color(0xffd8f0de).withValues(alpha: 0.85);
-    canvas.drawCircle(Offset(size.width * 0.16, size.height * 0.92), 82, park);
+    canvas.drawCircle(
+      Offset(size.width * 0.92, 20),
+      78,
+      Paint()..color = const Color(0xffd7e8f7).withValues(alpha: 0.75),
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.16, size.height * 0.92),
+      82,
+      Paint()..color = const Color(0xffd8f0de).withValues(alpha: 0.85),
+    );
 
     final road = Paint()
       ..color = Colors.white
@@ -260,11 +379,6 @@ class _MapPainter extends CustomPainter {
     ]) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), road);
     }
-    canvas.drawLine(
-      Offset(size.width * 0.52, 0),
-      Offset(size.width * 0.82, size.height),
-      road,
-    );
 
     final route = Paint()
       ..color = const Color(0xffd63c1e)
@@ -341,49 +455,24 @@ class _DriverMapMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SizedBox(
-          width: 48,
-          height: 48,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.24),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xffd63c1e),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.delivery_dining_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xffd63c1e),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.4),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
             ],
+          ),
+          child: const Icon(
+            Icons.delivery_dining_rounded,
+            color: Colors.white,
+            size: 22,
           ),
         ),
         Container(
@@ -391,13 +480,6 @@ class _DriverMapMarker extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.primary,
             borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: const Text(
             'Tài xế xế yêu',
@@ -422,6 +504,7 @@ class _MapLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(maxWidth: 118),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.background,
@@ -436,6 +519,8 @@ class _MapLabel extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           color: AppColors.text,
           fontSize: 10,
@@ -473,42 +558,16 @@ class _EtaPill extends StatelessWidget {
               _TintCircle(icon: Icons.timer_outlined),
               SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Thời gian nhận món',
-                      style: TextStyle(
-                        color: Color(0xff8f7069),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        height: 1.2,
-                      ),
-                    ),
-                    Text.rich(
-                      TextSpan(
-                        text: 'Dự kiến: 11:45 ',
-                        children: [
-                          TextSpan(
-                            text: '(còn 8 phút)',
-                            style: TextStyle(
-                              color: Color(0xffa73a00),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        height: 1.38,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Dự kiến: 11:45 (còn 8 phút)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    height: 1.38,
+                  ),
                 ),
               ),
               SizedBox(width: 8),
@@ -546,7 +605,9 @@ class _EtaBadge extends StatelessWidget {
 }
 
 class _OrderCodeRow extends StatelessWidget {
-  const _OrderCodeRow();
+  const _OrderCodeRow({required this.order});
+
+  final FoodOrder order;
 
   @override
   Widget build(BuildContext context) {
@@ -564,10 +625,10 @@ class _OrderCodeRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          const Expanded(
+          Expanded(
             child: Text(
-              '#SPF-88231',
-              style: TextStyle(
+              order.code,
+              style: const TextStyle(
                 color: AppColors.primary,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -577,7 +638,7 @@ class _OrderCodeRow extends StatelessWidget {
           ),
           InkWell(
             onTap: () =>
-                _showTrackingAction(context, 'Đã sao chép mã đơn #SPF-88231'),
+                _showTrackingAction(context, 'Đã sao chép mã đơn ${order.code}'),
             borderRadius: BorderRadius.circular(8),
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -604,18 +665,20 @@ class _OrderCodeRow extends StatelessWidget {
 }
 
 class _DeliveryStepperCard extends StatelessWidget {
-  const _DeliveryStepperCard();
+  const _DeliveryStepperCard({required this.order});
+
+  final FoodOrder order;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: _SurfaceCard(
         height: 192,
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Stack(
           children: [
-            Positioned(
+            const Positioned(
               left: 0,
               right: 0,
               top: 0,
@@ -636,8 +699,13 @@ class _DeliveryStepperCard extends StatelessWidget {
                 ],
               ),
             ),
-            Positioned(left: 8, right: 8, top: 48, child: _StepperBar()),
-            Positioned(left: 0, right: 0, bottom: 0, child: _DriverNotice()),
+            const Positioned(left: 8, right: 8, top: 48, child: _StepperBar()),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _DriverNotice(note: order.statusNote ?? ''),
+            ),
           ],
         ),
       ),
@@ -720,31 +788,15 @@ class _StepNode extends StatelessWidget {
       width: 66,
       child: Column(
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              if (active)
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xffd63c1e).withValues(alpha: 0.18),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: Icon(
-                  icon,
-                  color: active || complete
-                      ? Colors.white
-                      : const Color(0xff8f7069),
-                  size: 16,
-                ),
-              ),
-            ],
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Icon(
+              icon,
+              color: active || complete ? Colors.white : const Color(0xff8f7069),
+              size: 16,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -802,7 +854,9 @@ class _LiveBadge extends StatelessWidget {
 }
 
 class _DriverNotice extends StatelessWidget {
-  const _DriverNotice();
+  const _DriverNotice({required this.note});
+
+  final String note;
 
   @override
   Widget build(BuildContext context) {
@@ -812,28 +866,16 @@ class _DriverNotice extends StatelessWidget {
         color: const Color(0xffffdad3).withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.near_me_outlined, color: AppColors.primary, size: 18),
-          SizedBox(width: 10),
+          const Icon(Icons.near_me_outlined, color: AppColors.primary, size: 18),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                text: 'Tài xế đang cách bạn ',
-                children: [
-                  TextSpan(
-                    text: '1.2 km',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  TextSpan(
-                    text: '. Vui lòng để ý điện thoại khi shipper đến nhé!',
-                  ),
-                ],
-              ),
-              style: TextStyle(
+            child: Text(
+              note.isEmpty
+                  ? 'Tài xế đang giao món. Vui lòng để ý điện thoại khi shipper đến nhé!'
+                  : note,
+              style: const TextStyle(
                 color: AppColors.text,
                 fontSize: 13,
                 height: 1.38,
@@ -857,48 +899,15 @@ class _DriverCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const SizedBox(
-                  width: 52,
-                  height: 52,
-                  child: ClipOval(
-                    child: AppAssetImage(
-                      AppAssets.profile,
-                      fallback: AppImageFallback(icon: Icons.person_rounded),
-                    ),
-                  ),
+            const SizedBox(
+              width: 52,
+              height: 52,
+              child: ClipOval(
+                child: AppAssetImage(
+                  AppAssets.profile,
+                  fallback: AppImageFallback(icon: Icons.person_rounded),
                 ),
-                Positioned(
-                  right: -4,
-                  bottom: -4,
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: _CircleIcon(
-                        icon: Icons.shield_rounded,
-                        size: 16,
-                        iconSize: 10,
-                        background: AppColors.success,
-                        foreground: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -932,15 +941,13 @@ class _DriverCard extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    'Honda Wave',
+                    'Honda Wave • 59-P1 889.92',
                     style: TextStyle(
                       color: AppColors.muted,
                       fontSize: 13,
                       height: 1.38,
                     ),
                   ),
-                  SizedBox(height: 2),
-                  _LicensePlate(),
                 ],
               ),
             ),
@@ -949,8 +956,8 @@ class _DriverCard extends StatelessWidget {
               icon: Icons.phone_rounded,
               size: 44,
               iconSize: 18,
-              background: Color(0xffffdbce),
-              foreground: Color(0xff370e00),
+              background: const Color(0xffffdbce),
+              foreground: const Color(0xff370e00),
               onTap: () =>
                   _showTrackingAction(context, 'Đang gọi tài xế Nguyễn Văn A'),
             ),
@@ -971,55 +978,207 @@ class _DriverCard extends StatelessWidget {
   }
 }
 
-class _LicensePlate extends StatelessWidget {
-  const _LicensePlate();
+class _StatusSummaryCard extends StatelessWidget {
+  const _StatusSummaryCard({required this.order});
+
+  final FoodOrder order;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.softControl,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: const Text(
-        '59-P1 889.92',
-        style: TextStyle(
-          color: AppColors.text,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          height: 1.27,
+    final isCancelled = order.status == OrderStatus.cancelled;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: _SurfaceCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            _TintIcon(
+              icon: isCancelled
+                  ? Icons.cancel_outlined
+                  : Icons.check_circle_outline_rounded,
+              size: 40,
+              iconSize: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order.status.label,
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    order.statusNote ?? '',
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 13,
+                      height: 1.38,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _CompactOrderSummary extends StatelessWidget {
-  const _CompactOrderSummary();
+class _OrdersList extends StatelessWidget {
+  const _OrdersList({required this.orders});
+
+  final List<FoodOrder> orders;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+    if (orders.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          for (final order in orders) ...[
+            _OrderHistoryCard(order: order),
+            if (order != orders.last) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderHistoryCard extends StatelessWidget {
+  const _OrderHistoryCard({required this.order});
+
+  final FoodOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 54,
+              height: 54,
+              child: AppAssetImage(
+                order.restaurant.image,
+                fit: BoxFit.cover,
+                fallback: AppImageFallback(label: order.status.label),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        order.restaurant.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.text,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      order.code,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${order.itemCount} món • ${order.createdAt}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        order.statusNote ?? order.status.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: order.status == OrderStatus.cancelled
+                              ? AppColors.primary
+                              : AppColors.success,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      formatCurrency(order.total),
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactOrderSummary extends StatelessWidget {
+  const _CompactOrderSummary({required this.order});
+
+  final FoodOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: _SurfaceCard(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
               children: [
-                _TintIcon(
+                const _TintIcon(
                   icon: Icons.restaurant_rounded,
                   size: 24,
                   iconSize: 14,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Cơm Tấm Phúc Lộc Thọ',
+                    order.restaurant.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.text,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -1028,17 +1187,21 @@ class _CompactOrderSummary extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '2 món',
-                  style: TextStyle(color: Color(0xff8f7069), fontSize: 11),
+                  '${order.itemCount} món',
+                  style: const TextStyle(color: Color(0xff8f7069), fontSize: 11),
                 ),
               ],
             ),
-            SizedBox(height: 12),
-            _SummaryItem(label: '1× Cơm tấm sườn bì chả', price: '52.000đ'),
-            SizedBox(height: 6),
-            _SummaryItem(label: '1× Cơm sườn trứng', price: '42.000đ'),
-            SizedBox(height: 12),
-            _PaymentTotalRow(),
+            const SizedBox(height: 12),
+            for (final item in order.items.take(3)) ...[
+              _SummaryItem(
+                label: '${item.quantity}× ${item.dish.name}',
+                price: formatCurrency(item.total),
+              ),
+              const SizedBox(height: 6),
+            ],
+            const SizedBox(height: 6),
+            _PaymentTotalRow(total: order.total),
           ],
         ),
       ),
@@ -1084,7 +1247,9 @@ class _SummaryItem extends StatelessWidget {
 }
 
 class _PaymentTotalRow extends StatelessWidget {
-  const _PaymentTotalRow();
+  const _PaymentTotalRow({required this.total});
+
+  final int total;
 
   @override
   Widget build(BuildContext context) {
@@ -1094,15 +1259,15 @@ class _PaymentTotalRow extends StatelessWidget {
         color: AppColors.field,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.account_balance_wallet_outlined,
             color: AppColors.primary,
             size: 16,
           ),
-          SizedBox(width: 6),
-          Expanded(
+          const SizedBox(width: 6),
+          const Expanded(
             child: Text(
               'Ví ShopeePay',
               style: TextStyle(
@@ -1112,7 +1277,7 @@ class _PaymentTotalRow extends StatelessWidget {
               ),
             ),
           ),
-          Text(
+          const Text(
             'Tổng cộng: ',
             style: TextStyle(
               color: Color(0xff8f7069),
@@ -1121,8 +1286,8 @@ class _PaymentTotalRow extends StatelessWidget {
             ),
           ),
           Text(
-            '94.000đ',
-            style: TextStyle(
+            formatCurrency(total),
+            style: const TextStyle(
               color: AppColors.primary,
               fontSize: 16,
               fontWeight: FontWeight.w900,
@@ -1170,6 +1335,31 @@ class _ReturnHomeButton extends StatelessWidget {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyStatusCard extends StatelessWidget {
+  const _EmptyStatusCard({required this.status});
+
+  final OrderStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: _SurfaceCard(
+        padding: const EdgeInsets.all(18),
+        child: Text(
+          'Chưa có đơn ${status.label.toLowerCase()}',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

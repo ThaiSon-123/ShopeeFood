@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:app_shopeefood/data/shopee_food_data.dart';
 import 'package:app_shopeefood/screens/account_screen.dart';
 import 'package:app_shopeefood/screens/order_tracking_screen.dart';
 import 'package:app_shopeefood/shared/shopee_food_widgets.dart';
@@ -11,6 +12,7 @@ class CartCheckoutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topSafeArea = MediaQuery.paddingOf(context).top;
+    final state = ShopeeFoodScope.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -21,25 +23,29 @@ class CartCheckoutScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(height: 8),
-                    _DeliveryPromise(),
-                    SizedBox(height: 12),
-                    _AddressCard(),
-                    SizedBox(height: 14),
-                    _RestaurantTitle(),
-                    SizedBox(height: 8),
-                    _OrderItemsList(),
-                    SizedBox(height: 12),
-                    _OrderNoteField(),
-                    SizedBox(height: 12),
-                    _VoucherCard(),
-                    SizedBox(height: 12),
-                    _PaymentMethodsCard(),
-                    SizedBox(height: 12),
-                    _BillSummaryCard(),
+                    const SizedBox(height: 8),
+                    _DeliveryPromise(state: state),
+                    const SizedBox(height: 12),
+                    const _AddressCard(),
+                    const SizedBox(height: 14),
+                    if (state.cartRestaurant == null)
+                      const _EmptyCartCard()
+                    else ...[
+                      _RestaurantTitle(restaurant: state.cartRestaurant!),
+                      const SizedBox(height: 8),
+                      _OrderItemsList(items: state.cartItems),
+                      const SizedBox(height: 12),
+                      const _OrderNoteField(),
+                      const SizedBox(height: 12),
+                      _VoucherCard(discount: state.voucherDiscount),
+                      const SizedBox(height: 12),
+                      const _PaymentMethodsCard(),
+                      const SizedBox(height: 12),
+                      _BillSummaryCard(state: state),
+                    ],
                   ],
                 ),
               ),
@@ -51,7 +57,9 @@ class CartCheckoutScreen extends StatelessWidget {
             right: 0,
             bottom: 0,
             child: _CheckoutBottomBar(
+              state: state,
               onOrder: () {
+                state.placeOrder();
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const OrderTrackingScreen(),
@@ -104,7 +112,7 @@ class _CheckoutHeader extends StatelessWidget {
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
-                            'Chi Tiết Quán Ăn',
+                            'Giỏ hàng & Thanh toán',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -193,26 +201,30 @@ class _HeaderIconButton extends StatelessWidget {
 }
 
 class _DeliveryPromise extends StatelessWidget {
-  const _DeliveryPromise();
+  const _DeliveryPromise({required this.state});
+
+  final ShopeeFoodState state;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+    final eta = state.cartRestaurant?.etaLabel ?? '20-25 phút';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: _SoftPanel(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            Icon(Icons.timer_rounded, color: AppColors.primary, size: 17),
-            SizedBox(width: 8),
+            const Icon(Icons.timer_rounded, color: AppColors.primary, size: 17),
+            const SizedBox(width: 8),
             Expanded(
               child: Text.rich(
                 TextSpan(
                   text: 'Giao siêu tốc dự kiến ',
                   children: [
                     TextSpan(
-                      text: '20 - 25 phút',
-                      style: TextStyle(
+                      text: eta,
+                      style: const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w800,
                       ),
@@ -221,7 +233,7 @@ class _DeliveryPromise extends StatelessWidget {
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppColors.text,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -229,8 +241,8 @@ class _DeliveryPromise extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(width: 8),
-            _StatusPill(
+            const SizedBox(width: 8),
+            const _StatusPill(
               label: 'Đúng giờ',
               color: AppColors.success,
               background: Color(0xff71fe91),
@@ -247,6 +259,8 @@ class _AddressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = ShopeeFoodScope.of(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: _SurfaceCard(
@@ -256,11 +270,11 @@ class _AddressCard extends StatelessWidget {
           children: [
             const _TintIcon(icon: Icons.location_on_rounded, round: true),
             const SizedBox(width: 8),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
                       Text(
                         'Địa chỉ nhận món',
@@ -281,24 +295,24 @@ class _AddressCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
-                    '123 Nguyễn Văn Cừ, P.4, Q.5',
+                    state.selectedAddress.address,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.text,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       height: 1.38,
                     ),
                   ),
-                  SizedBox(height: 1),
+                  const SizedBox(height: 1),
                   Text(
-                    'Nguyễn Thu Hà • 0901 234 567',
+                    state.selectedAddress.contactLine,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 13,
                       height: 1.38,
@@ -309,8 +323,7 @@ class _AddressCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             TextButton(
-              onPressed: () =>
-                  _showCheckoutAction(context, 'Đã chọn thay đổi địa chỉ'),
+              onPressed: () => _showAddressPicker(context),
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.softControl,
                 foregroundColor: AppColors.primary,
@@ -341,27 +354,29 @@ class _AddressCard extends StatelessWidget {
 }
 
 class _RestaurantTitle extends StatelessWidget {
-  const _RestaurantTitle();
+  const _RestaurantTitle({required this.restaurant});
+
+  final Restaurant restaurant;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          _TintIcon(
+          const _TintIcon(
             icon: Icons.storefront_rounded,
             size: 24,
             iconSize: 14,
             round: false,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Cơm Tấm Phúc Lộc Thọ',
+              restaurant.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.text,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -369,17 +384,19 @@ class _RestaurantTitle extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: 8),
-          Icon(Icons.verified_rounded, color: AppColors.success, size: 13),
-          SizedBox(width: 3),
-          Text(
-            'Quán Đối Tác',
-            style: TextStyle(
-              color: AppColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+          if (restaurant.partner) ...[
+            const SizedBox(width: 8),
+            const Icon(Icons.verified_rounded, color: AppColors.success, size: 13),
+            const SizedBox(width: 3),
+            const Text(
+              'Quán Đối Tác',
+              style: TextStyle(
+                color: AppColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -387,22 +404,9 @@ class _RestaurantTitle extends StatelessWidget {
 }
 
 class _OrderItemsList extends StatelessWidget {
-  const _OrderItemsList();
+  const _OrderItemsList({required this.items});
 
-  static const items = [
-    _CheckoutItem(
-      name: 'Cơm tấm sườn bì chả',
-      description: 'Sườn nướng mềm, mỡ hành thơm lừng',
-      price: '45.000đ',
-      image: AppAssets.restaurantRice,
-    ),
-    _CheckoutItem(
-      name: 'Cơm sườn trứng',
-      description: 'Trứng ốp la lòng đào béo ngậy',
-      price: '50.000đ',
-      image: AppAssets.promoDish,
-    ),
-  ];
+  final List<OrderItem> items;
 
   @override
   Widget build(BuildContext context) {
@@ -423,10 +427,12 @@ class _OrderItemsList extends StatelessWidget {
 class _CheckoutItemCard extends StatelessWidget {
   const _CheckoutItemCard({required this.item});
 
-  final _CheckoutItem item;
+  final OrderItem item;
 
   @override
   Widget build(BuildContext context) {
+    final state = ShopeeFoodScope.of(context);
+
     return _SurfaceCard(
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -437,9 +443,9 @@ class _CheckoutItemCard extends StatelessWidget {
               width: 64,
               height: 64,
               child: AppAssetImage(
-                item.image,
+                item.dish.image,
                 fit: BoxFit.cover,
-                fallback: AppImageFallback(label: item.price),
+                fallback: AppImageFallback(label: formatCurrency(item.dish.price)),
               ),
             ),
           ),
@@ -453,7 +459,7 @@ class _CheckoutItemCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        item.name,
+                        item.dish.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -464,15 +470,19 @@ class _CheckoutItemCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(
-                      Icons.delete_outline_rounded,
-                      color: AppColors.muted,
-                      size: 18,
+                    InkWell(
+                      onTap: () => state.removeLine(item.dish.id),
+                      borderRadius: BorderRadius.circular(999),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: AppColors.muted,
+                        size: 18,
+                      ),
                     ),
                   ],
                 ),
                 Text(
-                  item.description,
+                  item.dish.description,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -487,7 +497,7 @@ class _CheckoutItemCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        item.price,
+                        formatCurrency(item.dish.price),
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 16,
@@ -496,7 +506,7 @@ class _CheckoutItemCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const _QuantityStepper(),
+                    _QuantityStepper(item: item),
                   ],
                 ),
               ],
@@ -509,10 +519,15 @@ class _CheckoutItemCard extends StatelessWidget {
 }
 
 class _QuantityStepper extends StatelessWidget {
-  const _QuantityStepper();
+  const _QuantityStepper({required this.item});
+
+  final OrderItem item;
 
   @override
   Widget build(BuildContext context) {
+    final state = ShopeeFoodScope.of(context);
+    final restaurant = state.cartRestaurant;
+
     return Container(
       height: 28,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -527,15 +542,15 @@ class _QuantityStepper extends StatelessWidget {
             icon: Icons.remove_rounded,
             background: AppColors.divider,
             foreground: AppColors.muted,
-            onTap: () => _showCheckoutAction(context, 'Đã giảm số lượng món'),
+            onTap: () => state.removeDish(item.dish.id),
           ),
           const SizedBox(width: 10),
-          const SizedBox(
+          SizedBox(
             width: 12,
             child: Text(
-              '1',
+              '${item.quantity}',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.text,
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -547,7 +562,9 @@ class _QuantityStepper extends StatelessWidget {
             icon: Icons.add_rounded,
             background: AppColors.logoOrange,
             foreground: Colors.white,
-            onTap: () => _showCheckoutAction(context, 'Đã tăng số lượng món'),
+            onTap: restaurant == null
+                ? null
+                : () => state.addDish(restaurant, item.dish),
           ),
         ],
       ),
@@ -588,10 +605,14 @@ class _OrderNoteField extends StatelessWidget {
 }
 
 class _VoucherCard extends StatelessWidget {
-  const _VoucherCard();
+  const _VoucherCard({required this.discount});
+
+  final int discount;
 
   @override
   Widget build(BuildContext context) {
+    final hasDiscount = discount > 0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: _SurfaceCard(
@@ -605,13 +626,13 @@ class _VoucherCard extends StatelessWidget {
               round: false,
             ),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Flexible(
+                      const Flexible(
                         child: Text(
                           'SHOPEEFOOD20',
                           maxLines: 1,
@@ -624,26 +645,32 @@ class _VoucherCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      SizedBox(width: 6),
-                      _DiscountBadge(),
+                      const SizedBox(width: 6),
+                      if (hasDiscount) _DiscountBadge(discount: discount),
                     ],
                   ),
-                  SizedBox(height: 3),
+                  const SizedBox(height: 3),
                   Row(
                     children: [
                       Icon(
-                        Icons.check_circle_outline_rounded,
-                        color: AppColors.success,
+                        hasDiscount
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.info_outline_rounded,
+                        color: hasDiscount ? AppColors.success : AppColors.muted,
                         size: 12,
                       ),
-                      SizedBox(width: 3),
+                      const SizedBox(width: 3),
                       Expanded(
                         child: Text(
-                          'Áp dụng thành công ưu đãi bạn mới',
+                          hasDiscount
+                              ? 'Áp dụng thành công ưu đãi bạn mới'
+                              : 'Thêm từ 50.000đ để dùng ưu đãi',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: AppColors.success,
+                            color: hasDiscount
+                                ? AppColors.success
+                                : AppColors.muted,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             height: 1.2,
@@ -680,7 +707,9 @@ class _VoucherCard extends StatelessWidget {
 }
 
 class _DiscountBadge extends StatelessWidget {
-  const _DiscountBadge();
+  const _DiscountBadge({required this.discount});
+
+  final int discount;
 
   @override
   Widget build(BuildContext context) {
@@ -690,9 +719,9 @@ class _DiscountBadge extends StatelessWidget {
         color: const Color(0xffffdad3),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: const Text(
-        '-20.000đ',
-        style: TextStyle(
+      child: Text(
+        '-${formatCurrency(discount)}',
+        style: const TextStyle(
           color: AppColors.primary,
           fontSize: 10,
           fontWeight: FontWeight.w700,
@@ -818,18 +847,20 @@ class _PaymentOption extends StatelessWidget {
 }
 
 class _BillSummaryCard extends StatelessWidget {
-  const _BillSummaryCard();
+  const _BillSummaryCard({required this.state});
+
+  final ShopeeFoodState state;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: _SurfaceCard(
-        padding: EdgeInsets.all(14),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Chi tiết thanh toán',
               style: TextStyle(
                 color: AppColors.text,
@@ -838,24 +869,27 @@ class _BillSummaryCard extends StatelessWidget {
                 height: 1.38,
               ),
             ),
-            SizedBox(height: 10),
-            _BillRow(label: 'Tạm tính (2 món)', value: '95.000đ'),
-            SizedBox(height: 8),
+            const SizedBox(height: 10),
             _BillRow(
-              label: 'Phí giao hàng (1.2 km)',
-              value: '16.000đ',
+              label: 'Tạm tính (${state.cartItemCount} món)',
+              value: formatCurrency(state.subtotal),
+            ),
+            const SizedBox(height: 8),
+            _BillRow(
+              label: 'Phí giao hàng (${state.cartRestaurant?.distanceLabel ?? '0 km'})',
+              value: formatCurrency(state.deliveryFee),
               icon: Icons.info_outline_rounded,
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             _BillRow(
               label: 'Giảm giá voucher',
-              value: '-20.000đ',
+              value: '-${formatCurrency(state.voucherDiscount)}',
               highlight: true,
             ),
-            SizedBox(height: 8),
-            _BillRow(label: 'Phí dịch vụ', value: '3.000đ'),
-            SizedBox(height: 10),
-            _TotalPanel(),
+            const SizedBox(height: 8),
+            _BillRow(label: 'Phí dịch vụ', value: formatCurrency(state.serviceFee)),
+            const SizedBox(height: 10),
+            _TotalPanel(total: state.total),
           ],
         ),
       ),
@@ -922,15 +956,17 @@ class _BillRow extends StatelessWidget {
 }
 
 class _TotalPanel extends StatelessWidget {
-  const _TotalPanel();
+  const _TotalPanel({required this.total});
+
+  final int total;
 
   @override
   Widget build(BuildContext context) {
-    return const _SoftPanel(
-      padding: EdgeInsets.all(8),
+    return _SoftPanel(
+      padding: const EdgeInsets.all(8),
       child: Row(
         children: [
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -955,8 +991,8 @@ class _TotalPanel extends StatelessWidget {
             ),
           ),
           Text(
-            '94.000đ',
-            style: TextStyle(
+            formatCurrency(total),
+            style: const TextStyle(
               color: AppColors.primary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
@@ -970,8 +1006,9 @@ class _TotalPanel extends StatelessWidget {
 }
 
 class _CheckoutBottomBar extends StatelessWidget {
-  const _CheckoutBottomBar({required this.onOrder});
+  const _CheckoutBottomBar({required this.state, required this.onOrder});
 
+  final ShopeeFoodState state;
   final VoidCallback onOrder;
 
   @override
@@ -998,12 +1035,12 @@ class _CheckoutBottomBar extends StatelessWidget {
                 constraints: const BoxConstraints(maxWidth: 398),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
+                          const Text(
                             'Tổng thanh toán',
                             style: TextStyle(
                               color: AppColors.muted,
@@ -1012,8 +1049,8 @@ class _CheckoutBottomBar extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '94.000đ',
-                            style: TextStyle(
+                            formatCurrency(state.total),
+                            style: const TextStyle(
                               color: AppColors.primary,
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
@@ -1021,8 +1058,8 @@ class _CheckoutBottomBar extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Tiết kiệm 20.000đ',
-                            style: TextStyle(
+                            'Tiết kiệm ${formatCurrency(state.voucherDiscount)}',
+                            style: const TextStyle(
                               color: AppColors.success,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
@@ -1037,7 +1074,7 @@ class _CheckoutBottomBar extends StatelessWidget {
                       width: 168,
                       height: 48,
                       child: ElevatedButton(
-                        onPressed: onOrder,
+                        onPressed: state.cartItemCount == 0 ? null : onOrder,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -1067,6 +1104,44 @@ class _CheckoutBottomBar extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyCartCard extends StatelessWidget {
+  const _EmptyCartCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: _SurfaceCard(
+        padding: EdgeInsets.all(18),
+        child: Column(
+          children: [
+            Icon(
+              Icons.shopping_bag_outlined,
+              color: AppColors.primary,
+              size: 36,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Giỏ hàng đang trống',
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Quay lại quán ăn để thêm món bạn thích.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.muted, fontSize: 13),
+            ),
+          ],
         ),
       ),
     );
@@ -1211,18 +1286,58 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _CheckoutItem {
-  const _CheckoutItem({
-    required this.name,
-    required this.description,
-    required this.price,
-    required this.image,
-  });
+void _showAddressPicker(BuildContext context) {
+  final state = ShopeeFoodScope.of(context);
 
-  final String name;
-  final String description;
-  final String price;
-  final String image;
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Chọn địa chỉ giao hàng',
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (final address in demoAddresses)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    state.selectedAddress.id == address.id
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    address.label,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(address.address),
+                  onTap: () {
+                    state.selectAddress(address);
+                    Navigator.of(sheetContext).pop();
+                    _showCheckoutAction(context, 'Đã đổi địa chỉ giao hàng');
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 void _showCheckoutAction(BuildContext context, String message) {

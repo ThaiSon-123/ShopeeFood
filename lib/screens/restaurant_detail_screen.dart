@@ -1,16 +1,22 @@
 import 'dart:ui';
 
+import 'package:app_shopeefood/data/shopee_food_data.dart';
 import 'package:app_shopeefood/screens/account_screen.dart';
 import 'package:app_shopeefood/screens/cart_checkout_screen.dart';
 import 'package:app_shopeefood/shared/shopee_food_widgets.dart';
 import 'package:flutter/material.dart';
 
 class RestaurantDetailScreen extends StatelessWidget {
-  const RestaurantDetailScreen({super.key});
+  const RestaurantDetailScreen({super.key, this.restaurant});
+
+  final Restaurant? restaurant;
+
+  Restaurant get _restaurant => restaurant ?? demoRestaurants.first;
 
   @override
   Widget build(BuildContext context) {
     final topSafeArea = MediaQuery.paddingOf(context).top;
+    final activeRestaurant = _restaurant;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -21,24 +27,24 @@ class RestaurantDetailScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _HeroAndInfo(),
-                    _MenuTabs(),
-                    SizedBox(height: 12),
-                    _PopularDishSection(),
+                    _HeroAndInfo(restaurant: activeRestaurant),
+                    _MenuTabs(restaurant: activeRestaurant),
+                    const SizedBox(height: 12),
+                    _PopularDishSection(restaurant: activeRestaurant),
                   ],
                 ),
               ),
             ),
           ),
-          Positioned(left: 0, right: 0, top: 0, child: const _DetailHeader()),
+          const Positioned(left: 0, right: 0, top: 0, child: _DetailHeader()),
           Positioned(
             left: 16,
             right: 16,
             top: topSafeArea + 88,
-            child: const _CheckoutSummary(),
+            child: _CheckoutSummary(restaurant: activeRestaurant),
           ),
         ],
       ),
@@ -171,10 +177,17 @@ class _HeaderIconButton extends StatelessWidget {
 }
 
 class _CheckoutSummary extends StatelessWidget {
-  const _CheckoutSummary();
+  const _CheckoutSummary({required this.restaurant});
+
+  final Restaurant restaurant;
 
   @override
   Widget build(BuildContext context) {
+    final state = ShopeeFoodScope.of(context);
+    final restaurantCartActive = state.cartRestaurant?.id == restaurant.id;
+    final itemCount = restaurantCartActive ? state.cartItemCount : 0;
+    final subtotal = restaurantCartActive ? state.subtotal : 0;
+
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 398),
@@ -219,10 +232,10 @@ class _CheckoutSummary extends StatelessWidget {
                         color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
-                          '2',
-                          style: TextStyle(
+                          '$itemCount',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -235,7 +248,7 @@ class _CheckoutSummary extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -243,15 +256,15 @@ class _CheckoutSummary extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '2 món',
-                          style: TextStyle(
+                          '$itemCount món',
+                          style: const TextStyle(
                             color: AppColors.text,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             height: 1.33,
                           ),
                         ),
-                        Padding(
+                        const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 4),
                           child: Text(
                             '•',
@@ -259,8 +272,8 @@ class _CheckoutSummary extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '95.000đ',
-                          style: TextStyle(
+                          formatCurrency(subtotal),
+                          style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -270,10 +283,12 @@ class _CheckoutSummary extends StatelessWidget {
                       ],
                     ),
                     Text(
-                      'Đã áp dụng mã giảm phí ship',
+                      itemCount == 0
+                          ? 'Thêm món để tạo đơn hàng'
+                          : 'Đã áp dụng mã giảm phí ship',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Color(0xff8f7069),
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
@@ -289,6 +304,10 @@ class _CheckoutSummary extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 child: InkWell(
                   onTap: () {
+                    if (state.cartItemCount == 0 ||
+                        state.cartRestaurant?.id != restaurant.id) {
+                      state.ensureCartHasDemoItems(restaurant);
+                    }
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const CartCheckoutScreen(),
@@ -341,7 +360,9 @@ class _CheckoutSummary extends StatelessWidget {
 }
 
 class _HeroAndInfo extends StatelessWidget {
-  const _HeroAndInfo();
+  const _HeroAndInfo({required this.restaurant});
+
+  final Restaurant restaurant;
 
   @override
   Widget build(BuildContext context) {
@@ -358,10 +379,10 @@ class _HeroAndInfo extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                const AppAssetImage(
-                  AppAssets.promoDish,
+                AppAssetImage(
+                  restaurant.coverImage,
                   fit: BoxFit.cover,
-                  fallback: AppImageFallback(label: 'Cơm tấm'),
+                  fallback: AppImageFallback(label: restaurant.category),
                 ),
                 DecoratedBox(
                   decoration: BoxDecoration(
@@ -379,11 +400,11 @@ class _HeroAndInfo extends StatelessWidget {
               ],
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             right: 16,
             top: 184,
-            child: _RestaurantInfoCard(),
+            child: _RestaurantInfoCard(restaurant: restaurant),
           ),
         ],
       ),
@@ -392,7 +413,9 @@ class _HeroAndInfo extends StatelessWidget {
 }
 
 class _RestaurantInfoCard extends StatelessWidget {
-  const _RestaurantInfoCard();
+  const _RestaurantInfoCard({required this.restaurant});
+
+  final Restaurant restaurant;
 
   @override
   Widget build(BuildContext context) {
@@ -409,19 +432,19 @@ class _RestaurantInfoCard extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Cơm Tấm Phúc Lộc Thọ - Chi nhánh Quận 5',
-            style: TextStyle(
+            restaurant.displayName,
+            style: const TextStyle(
               color: AppColors.text,
               fontSize: 18,
               fontWeight: FontWeight.w800,
               height: 1.25,
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 12,
             runSpacing: 6,
@@ -429,37 +452,37 @@ class _RestaurantInfoCard extends StatelessWidget {
             children: [
               _InfoMetric(
                 icon: Icons.star_rounded,
-                iconColor: Color(0xffff8a00),
-                label: '4.8',
-                note: '(500+ đánh giá)',
+                iconColor: const Color(0xffff8a00),
+                label: restaurant.ratingLabel,
+                note: '(${restaurant.reviewCount}+ đánh giá)',
               ),
               _InfoMetric(
                 icon: Icons.navigation_rounded,
                 iconColor: AppColors.success,
-                label: '1.2 km',
+                label: restaurant.distanceLabel,
               ),
               _InfoMetric(
                 icon: Icons.access_time_rounded,
                 iconColor: AppColors.primary,
-                label: '20 - 30 phút',
+                label: restaurant.etaLabel,
               ),
             ],
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.location_on_outlined,
                 color: Color(0xff8f7069),
                 size: 15,
               ),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  '123 Nguyễn Văn Cừ, Phường 4, Quận 5, TP.HCM',
+                  restaurant.address,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Color(0xff8f7069),
                     fontSize: 13,
                     height: 1.38,
@@ -468,23 +491,26 @@ class _RestaurantInfoCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 10),
-          Row(
-            children: [
-              _DealTag(
-                label: 'Mã giảm 20k',
-                icon: Icons.confirmation_number_outlined,
-                background: Color(0xffffdad3),
-                foreground: Color(0xff3e0500),
-              ),
-              SizedBox(width: 8),
-              _DealTag(
-                label: 'Freeship 15k',
-                icon: Icons.delivery_dining_rounded,
-                background: Color(0xff71fe91),
-                foreground: Color(0xff002109),
-              ),
-            ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: restaurant.tags
+                .map(
+                  (tag) => _DealTag(
+                    label: tag,
+                    icon: tag.toLowerCase().contains('freeship')
+                        ? Icons.delivery_dining_rounded
+                        : Icons.confirmation_number_outlined,
+                    background: tag.toLowerCase().contains('freeship')
+                        ? const Color(0xff71fe91)
+                        : const Color(0xffffdad3),
+                    foreground: tag.toLowerCase().contains('freeship')
+                        ? const Color(0xff002109)
+                        : const Color(0xff3e0500),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -580,12 +606,18 @@ class _DealTag extends StatelessWidget {
 }
 
 class _MenuTabs extends StatelessWidget {
-  const _MenuTabs();
+  const _MenuTabs({required this.restaurant});
 
-  static const tabs = ['Bán chạy', 'Cơm', 'Canh', 'Đồ uống', 'Món thêm'];
+  final Restaurant restaurant;
 
   @override
   Widget build(BuildContext context) {
+    final tabs = <String>{
+      'Bán chạy',
+      ...restaurant.menu.map((dish) => dish.category),
+      'Món thêm',
+    }.toList();
+
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
@@ -633,74 +665,9 @@ class _MenuTabs extends StatelessWidget {
 }
 
 class _PopularDishSection extends StatelessWidget {
-  const _PopularDishSection();
+  const _PopularDishSection({required this.restaurant});
 
-  static const dishes = [
-    _Dish(
-      name: 'Cơm tấm sườn bì chả',
-      description: 'Sườn nướng đậm đà, chả trứng béo ngậy, bì giòn thơm.',
-      price: '45.000đ',
-      image: AppAssets.restaurantRice,
-      selectedCount: 1,
-      hot: true,
-    ),
-    _Dish(
-      name: 'Cơm sườn trứng ốp la',
-      description: 'Sườn cốt lết ướp mật ong nướng than hồng, trứng lòng đào.',
-      price: '50.000đ',
-      image: AppAssets.promoDish,
-      selectedCount: 1,
-    ),
-    _Dish(
-      name: 'Canh rong biển thịt bằm',
-      description: 'Canh ngọt thanh mát, rong biển Hàn Quốc, thịt bằm tươi.',
-      price: '20.000đ',
-      image: AppAssets.restaurantNoodles,
-    ),
-    _Dish(
-      name: 'Trà đào cam sả',
-      description: 'Vị chua ngọt thanh mát giải nhiệt, miếng đào giòn.',
-      price: '25.000đ',
-      image: AppAssets.categoryDrink,
-    ),
-    _Dish(
-      name: 'Cơm gà xối mỡ',
-      description: 'Đùi gà da giòn, cơm chiên tỏi và nước mắm chua ngọt.',
-      price: '48.000đ',
-      image: AppAssets.home12,
-      hot: true,
-    ),
-    _Dish(
-      name: 'Bún bò Huế đặc biệt',
-      description: 'Tô lớn nhiều thịt, chả cua, sa tế thơm cay vừa miệng.',
-      price: '55.000đ',
-      image: AppAssets.restaurantNoodles,
-    ),
-    _Dish(
-      name: 'Gà rán sốt cay',
-      description: 'Miếng gà giòn phủ sốt cay ngọt, ăn kèm salad bắp cải.',
-      price: '39.000đ',
-      image: AppAssets.home01,
-    ),
-    _Dish(
-      name: 'Trà sữa trân châu đường đen',
-      description: 'Sữa tươi béo nhẹ, trân châu mềm và kem cheese mặn.',
-      price: '32.000đ',
-      image: AppAssets.restaurantTea,
-    ),
-    _Dish(
-      name: 'Sinh tố bơ sầu riêng',
-      description: 'Bơ xay mịn cùng sầu riêng thơm béo, có thể chọn ít đường.',
-      price: '35.000đ',
-      image: AppAssets.home02,
-    ),
-    _Dish(
-      name: 'Cơm thêm',
-      description: 'Phần cơm trắng thêm cho bữa trưa no hơn.',
-      price: '8.000đ',
-      image: AppAssets.restaurantRice,
-    ),
-  ];
+  final Restaurant restaurant;
 
   @override
   Widget build(BuildContext context) {
@@ -723,7 +690,7 @@ class _PopularDishSection extends StatelessWidget {
                 ),
               ),
               Text(
-                '${dishes.length} món',
+                '${restaurant.menu.length} món',
                 style: const TextStyle(
                   color: Color(0xff8f7069),
                   fontSize: 10,
@@ -734,10 +701,10 @@ class _PopularDishSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          ...dishes.map(
+          ...restaurant.menu.map(
             (dish) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _DishCard(dish: dish),
+              child: _DishCard(restaurant: restaurant, dish: dish),
             ),
           ),
         ],
@@ -747,12 +714,18 @@ class _PopularDishSection extends StatelessWidget {
 }
 
 class _DishCard extends StatelessWidget {
-  const _DishCard({required this.dish});
+  const _DishCard({required this.restaurant, required this.dish});
 
-  final _Dish dish;
+  final Restaurant restaurant;
+  final MenuDish dish;
 
   @override
   Widget build(BuildContext context) {
+    final state = ShopeeFoodScope.of(context);
+    final count = state.cartRestaurant?.id == restaurant.id
+        ? state.quantityValueFor(dish.id)
+        : 0;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -802,7 +775,7 @@ class _DishCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          dish.price,
+                          formatCurrency(dish.price),
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 16,
@@ -811,10 +784,20 @@ class _DishCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (dish.selectedCount == null)
-                        const _AddDishButton()
+                      if (count == 0)
+                        _AddDishButton(
+                          key: Key('add-dish-${dish.id}'),
+                          onTap: () {
+                            state.addDish(restaurant, dish);
+                            _showDetailAction(context, 'Đã thêm ${dish.name}');
+                          },
+                        )
                       else
-                        _DishStepper(count: dish.selectedCount!),
+                        _DishStepper(
+                          count: count,
+                          onRemove: () => state.removeDish(dish.id),
+                          onAdd: () => state.addDish(restaurant, dish),
+                        ),
                     ],
                   ),
                 ],
@@ -831,7 +814,7 @@ class _DishCard extends StatelessWidget {
 class _DishImage extends StatelessWidget {
   const _DishImage({required this.dish});
 
-  final _Dish dish;
+  final MenuDish dish;
 
   @override
   Widget build(BuildContext context) {
@@ -846,7 +829,7 @@ class _DishImage extends StatelessWidget {
             AppAssetImage(
               dish.image,
               fit: BoxFit.cover,
-              fallback: AppImageFallback(label: dish.price),
+              fallback: AppImageFallback(label: formatCurrency(dish.price)),
             ),
             if (dish.hot)
               Positioned(
@@ -876,9 +859,15 @@ class _DishImage extends StatelessWidget {
 }
 
 class _DishStepper extends StatelessWidget {
-  const _DishStepper({required this.count});
+  const _DishStepper({
+    required this.count,
+    required this.onRemove,
+    required this.onAdd,
+  });
 
   final int count;
+  final VoidCallback onRemove;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -891,10 +880,11 @@ class _DishStepper extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const _TinyCircleButton(
+          _TinyCircleButton(
             icon: Icons.remove_rounded,
             color: Colors.white,
             iconColor: AppColors.primary,
+            onTap: onRemove,
           ),
           const SizedBox(width: 8),
           Text(
@@ -907,10 +897,11 @@ class _DishStepper extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const _TinyCircleButton(
+          _TinyCircleButton(
             icon: Icons.add_rounded,
             color: AppColors.primary,
             iconColor: Colors.white,
+            onTap: onAdd,
           ),
         ],
       ),
@@ -919,15 +910,18 @@ class _DishStepper extends StatelessWidget {
 }
 
 class _AddDishButton extends StatelessWidget {
-  const _AddDishButton();
+  const _AddDishButton({super.key, required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const _TinyCircleButton(
+    return _TinyCircleButton(
       icon: Icons.add_rounded,
       color: AppColors.primary,
       iconColor: Colors.white,
       size: 28,
+      onTap: onTap,
     );
   }
 }
@@ -937,41 +931,29 @@ class _TinyCircleButton extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.iconColor,
+    required this.onTap,
     this.size = 24,
   });
 
   final IconData icon;
   final Color color;
   final Color iconColor;
+  final VoidCallback onTap;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: Icon(icon, color: iconColor, size: size * 0.58),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        child: Icon(icon, color: iconColor, size: size * 0.58),
+      ),
     );
   }
-}
-
-class _Dish {
-  const _Dish({
-    required this.name,
-    required this.description,
-    required this.price,
-    required this.image,
-    this.selectedCount,
-    this.hot = false,
-  });
-
-  final String name;
-  final String description;
-  final String price;
-  final String image;
-  final int? selectedCount;
-  final bool hot;
 }
 
 void _showDetailAction(BuildContext context, String message) {

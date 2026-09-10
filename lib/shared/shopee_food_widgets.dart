@@ -27,6 +27,8 @@ class AppAssets {
   static const categoryDrink = 'assets/images/home_02.jpeg';
   static const home01 = 'assets/images/home_01.jpeg';
   static const home02 = 'assets/images/home_02.jpeg';
+  static const home03 = 'assets/images/home_03.jpeg';
+  static const home06 = 'assets/images/home_06.jpeg';
   static const home07 = 'assets/images/home_07.jpeg';
   static const home10 = 'assets/images/home_10.jpeg';
   static const home11 = 'assets/images/home_11.jpeg';

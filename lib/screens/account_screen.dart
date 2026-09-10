@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:app_shopeefood/data/shopee_food_data.dart';
 import 'package:app_shopeefood/screens/home_screen.dart';
 import 'package:app_shopeefood/screens/login_screen.dart';
 import 'package:app_shopeefood/screens/order_tracking_screen.dart';
@@ -26,14 +27,14 @@ class AccountScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _ProfileCard(),
-                    SizedBox(height: 14),
-                    _StatsRow(),
-                    SizedBox(height: 14),
-                    _AccountMenu(),
+                    const _ProfileCard(),
+                    const SizedBox(height: 14),
+                    const _StatsRow(),
+                    const SizedBox(height: 14),
+                    const _AccountMenu(),
                   ],
                 ),
               ),
@@ -350,6 +351,8 @@ class _AccountMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = ShopeeFoodScope.of(context);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -380,8 +383,8 @@ class _AccountMenu extends StatelessWidget {
           _MenuTile(
             icon: Icons.location_on_outlined,
             title: 'Địa chỉ giao hàng',
-            subtitle: '123 Nguyễn Văn Cừ, P.4, Q.5',
-            onTap: () => _showAction(context, 'Đã chọn mục địa chỉ giao hàng'),
+            subtitle: state.selectedAddress.address,
+            onTap: () => _showAddressPicker(context),
           ),
           const _MenuDivider(),
           _MenuTile(
@@ -490,6 +493,60 @@ class _MenuDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Divider(height: 1, indent: 62, color: AppColors.divider);
   }
+}
+
+void _showAddressPicker(BuildContext context) {
+  final state = ShopeeFoodScope.of(context);
+
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Chọn địa chỉ giao hàng',
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (final address in demoAddresses)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    state.selectedAddress.id == address.id
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    address.label,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(address.address),
+                  onTap: () {
+                    state.selectAddress(address);
+                    Navigator.of(sheetContext).pop();
+                    _showAction(context, 'Đã đổi địa chỉ giao hàng');
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 void _showAction(BuildContext context, String message) {
