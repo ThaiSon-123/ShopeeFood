@@ -19,7 +19,7 @@ class CartCheckoutScreen extends StatelessWidget {
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(0, topSafeArea + 100, 0, 118),
+            padding: EdgeInsets.fromLTRB(0, topSafeArea + 56, 0, 118),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
@@ -97,7 +97,6 @@ class _CheckoutHeader extends StatelessWidget {
             bottom: false,
             child: Column(
               children: [
-                const AppStatusRow(),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(

@@ -46,7 +46,7 @@ class _ShopeeFoodLoginScreenState extends State<ShopeeFoodLoginScreen> {
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16, topSafeArea + 108, 16, 108),
+            padding: EdgeInsets.fromLTRB(16, topSafeArea + 64, 16, 108),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),

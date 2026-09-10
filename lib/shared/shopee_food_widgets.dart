@@ -189,43 +189,6 @@ class AppImageFallback extends StatelessWidget {
   }
 }
 
-class AppStatusRow extends StatelessWidget {
-  const AppStatusRow({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 44,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '9:41',
-              style: TextStyle(
-                color: AppColors.text,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                height: 1.33,
-              ),
-            ),
-            Row(
-              children: [
-                Icon(Icons.signal_cellular_alt_rounded, size: 15),
-                SizedBox(width: 8),
-                Icon(Icons.wifi_rounded, size: 16),
-                SizedBox(width: 8),
-                Icon(Icons.battery_full_rounded, size: 16),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class AppTopHeader extends StatelessWidget {
   const AppTopHeader({
     super.key,
@@ -258,7 +221,6 @@ class AppTopHeader extends StatelessWidget {
             bottom: false,
             child: Column(
               children: [
-                const AppStatusRow(),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(

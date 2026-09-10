@@ -23,7 +23,7 @@ class RestaurantDetailScreen extends StatelessWidget {
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(0, topSafeArea + 100, 0, 32),
+            padding: EdgeInsets.fromLTRB(0, topSafeArea + 56, 0, 32),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
@@ -43,7 +43,7 @@ class RestaurantDetailScreen extends StatelessWidget {
           Positioned(
             left: 16,
             right: 16,
-            top: topSafeArea + 88,
+            top: topSafeArea + 44,
             child: _CheckoutSummary(restaurant: activeRestaurant),
           ),
         ],
@@ -75,7 +75,6 @@ class _DetailHeader extends StatelessWidget {
             bottom: false,
             child: Column(
               children: [
-                const AppStatusRow(),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(

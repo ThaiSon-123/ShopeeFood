@@ -30,7 +30,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(0, topSafeArea + 100, 0, 98),
+            padding: EdgeInsets.fromLTRB(0, topSafeArea + 56, 0, 98),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
@@ -125,7 +125,6 @@ class _TrackingHeader extends StatelessWidget {
             bottom: false,
             child: Column(
               children: [
-                const AppStatusRow(),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(

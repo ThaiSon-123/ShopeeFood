@@ -23,7 +23,7 @@ class AccountScreen extends StatelessWidget {
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16, topSafeArea + 108, 16, 24),
+            padding: EdgeInsets.fromLTRB(16, topSafeArea + 64, 16, 24),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
@@ -83,7 +83,6 @@ class _AccountHeader extends StatelessWidget {
             bottom: false,
             child: Column(
               children: [
-                const AppStatusRow(),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(
